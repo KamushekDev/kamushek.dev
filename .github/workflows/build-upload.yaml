@@ -36,7 +36,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup vue
-        uses: ng-easy/npm-install@v2
+        uses: ng-easy/npm-setup@v4
       - run: npm run build
 
       # Upload
