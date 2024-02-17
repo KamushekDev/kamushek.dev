@@ -1,0 +1,58 @@
+name: react - uniscore-placeholder
+on:
+  push:
+    branches:
+      - 'master'
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version-output.outputs.version }}
+    steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
+
+      # Generate version
+      - run: |
+          if [[ ${{ github.ref_name }} != 'master' ]]; \
+          then suf="-${{ github.ref_name }}"; \
+          fi \
+          && echo "suffix=$suf" >> $GITHUB_ENV
+        shell: bash
+      - run: |
+          version="$(date +'%Y.%m.%d').${{ github.run_number }}${{ github.run_attempt }}${{ env.suffix }}" \
+          && echo "version=$version" >> $GITHUB_ENV
+      - run: echo "Generated version = ${{ env.version }}"
+        shell: bash         
+      - id: version-output
+        run: echo "version=$(echo ${{ env.version }})" >> $GITHUB_OUTPUT
+        shell: bash
+
+      # Build
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup vue
+        uses: ng-easy/npm-install@v2
+      - run: npm run build
+
+      # Upload
+      - name: Publish to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: kamushek-dev
+          directory: dist
+          # Optional: Enable this if you want to have GitHub Deployments triggered
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          # Optional: Switch what branch you are publishing to.
+          # By default this will be the branch which triggered this workflow
+          # branch: main
+          # Optional: Change the working directory
+          # workingDirectory: my-site
+          # Optional: Change the Wrangler version, allows you to point to a specific version or a tag such as `beta`
+          wranglerVersion: '3'
